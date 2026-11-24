@@ -1,0 +1,18 @@
+.timer { display: grid; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.targets { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.targets legend { padding: 0 6px; color: var(--muted); font-size: 0.9rem; }
+.field { display: grid; gap: 2px; flex: 1 1 90px; font-size: 0.9rem; }
+.field input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.clock { font-size: 3rem; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.buttons button { min-width: 112px; min-height: 44px; }
+.progressBlock { display: grid; gap: 4px; }
+.bar { height: 16px; border: 1px solid var(--text); border-radius: 8px; background: var(--bg); overflow: hidden; }
+.fill { height: 100%; background: var(--accent); transition: width 0.2s linear; }
+.numbers { margin: 0; text-align: center; font-variant-numeric: tabular-nums; }
+.result { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid var(--border); justify-items: start; }
+.line { margin: 0; }
+.ok, .bad { font-weight: 700; }
+.ok { color: #1b6e2e; }
+.bad { color: var(--danger); }
+@media (max-width: 480px) { .clock { font-size: 2.5rem; } }

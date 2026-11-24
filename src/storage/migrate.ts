@@ -1,12 +1,13 @@
-import type { Script, Settings, StoredData } from '../types';
+import type { PracticeRecord, Script, Settings, StoredData } from '../types';
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export function emptyData(): StoredData {
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     scripts: [],
     settings: { rate: null, voiceURI: null },
+    records: [],
   };
 }
 
@@ -35,17 +36,49 @@ function sanitizeSettings(v: unknown): Settings {
   };
 }
 
+function nullableNumber(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null;
+}
+
+function sanitizeRecord(v: unknown): PracticeRecord | null {
+  if (!isRecord(v)) return null;
+  if (typeof v.id !== 'string' || typeof v.date !== 'string' || Number.isNaN(Date.parse(v.date))) return null;
+  const elapsedMs = nullableNumber(v.elapsedMs);
+  if (elapsedMs === null) return null;
+  return {
+    id: v.id,
+    scriptId: typeof v.scriptId === 'string' ? v.scriptId : null,
+    scriptTitle: typeof v.scriptTitle === 'string' ? v.scriptTitle : '',
+    date: v.date,
+    elapsedMs,
+    targetMs: nullableNumber(v.targetMs),
+    toleranceSec: nullableNumber(v.toleranceSec),
+    wordCount: nullableNumber(v.wordCount) ?? 0,
+    wpm: nullableNumber(v.wpm),
+  };
+}
+
+/** v1 -> v2: adds an empty practice record list. Scripts and settings are kept as they are. */
+export function migrateV1toV2(v1: Record<string, unknown>): Record<string, unknown> {
+  return { ...v1, schemaVersion: 2, records: [] };
+}
+
 /**
  * Brings stored data up to CURRENT_SCHEMA_VERSION.
  * Returns null when the data was written by a newer app version (must not be overwritten).
- * Add a case per version bump here.
+ * Add a step per version bump here.
  */
 export function migrate(raw: unknown): StoredData | null {
   if (!isRecord(raw)) return emptyData();
   const version = typeof raw.schemaVersion === 'number' ? raw.schemaVersion : 0;
   if (version > CURRENT_SCHEMA_VERSION) return null;
-  const scripts = Array.isArray(raw.scripts)
-    ? raw.scripts.map(sanitizeScript).filter((s): s is Script => s !== null)
+  // Data without a version is treated like v1 (same shape).
+  const data = version < 2 ? migrateV1toV2(raw) : raw;
+  const scripts = Array.isArray(data.scripts)
+    ? data.scripts.map(sanitizeScript).filter((s): s is Script => s !== null)
     : [];
-  return { schemaVersion: CURRENT_SCHEMA_VERSION, scripts, settings: sanitizeSettings(raw.settings) };
+  const records = Array.isArray(data.records)
+    ? data.records.map(sanitizeRecord).filter((r): r is PracticeRecord => r !== null)
+    : [];
+  return { schemaVersion: CURRENT_SCHEMA_VERSION, scripts, settings: sanitizeSettings(data.settings), records };
 }
