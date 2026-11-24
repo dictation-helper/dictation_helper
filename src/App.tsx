@@ -1,22 +1,29 @@
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import styles from './App.module.css';
+import { DiffView } from './components/DiffView/DiffView';
 import { Notice } from './components/Notice/Notice';
 import { PracticeHistory } from './components/PracticeHistory/PracticeHistory';
+import { Recorder } from './components/Recorder/Recorder';
 import { ScriptInput } from './components/ScriptInput/ScriptInput';
 import { ScriptLibrary } from './components/ScriptLibrary/ScriptLibrary';
 import { ScriptView } from './components/ScriptView/ScriptView';
 import { Timer } from './components/Timer/Timer';
 import { TTSControls } from './components/TTSControls/TTSControls';
+import { WeakWords } from './components/WeakWords/WeakWords';
+import { useAlternatePlayback } from './hooks/useAlternatePlayback';
+import { useRecorder } from './hooks/useRecorder';
 import { useScripts } from './hooks/useScripts';
+import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useVoices } from './hooks/useVoices';
 import { detectLang } from './lib/detectLang';
+import { collectWeakWords, diffScript, summarizeDiff } from './lib/diffWords';
 import { flattenScript, segmentScript } from './lib/segment';
 import { filterVoices, listLangs, pickVoice } from './lib/voices';
 import type { Script } from './types';
 
 export function App() {
-  const { scripts, settings, records, save, remove, addRecord, removeRecord, updateSettings, saveFailed, locked } = useScripts();
+  const { scripts, settings, records, weakWords, save, remove, addRecord, removeRecord, addWeakWords, removeWeakWord, clearWeakWords, updateSettings, saveFailed, locked } = useScripts();
   const voices = useVoices();
 
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -39,7 +46,28 @@ export function App() {
   const noVoiceForLang = voices.length > 0 && effectiveLang !== null && candidates.length === 0;
 
   const tts = useSpeechSynthesis(items, { rate: settings.rate, voice, lang: locale });
-  const { play, stop } = tts;
+  const { play, playTexts, stop } = tts;
+
+  const recorder = useRecorder();
+  const recognition = useSpeechRecognition(voice?.lang ?? locale);
+  const [useRecognition, setUseRecognition] = useState(true);
+  const [appliedTake, setAppliedTake] = useState<string | null>(null);
+
+  const speakOnce = useCallback((text: string, onDone: () => void) => playTexts([text], { onDone }), [playTexts]);
+  const alternate = useAlternatePlayback({ speak: speakOnce, stopSpeaking: stop });
+
+  const diff = useMemo(() => {
+    if (recorder.status !== 'stopped' || recognition.listening || !recognition.finalTranscript) return null;
+    const result = diffScript(deferredText, recognition.finalTranscript, locale);
+    return { result, summary: summarizeDiff(result.tokens), weak: collectWeakWords(result) };
+  }, [recorder.status, recognition.listening, recognition.finalTranscript, deferredText, locale]);
+
+  const recordingMs = recorder.status === 'stopped' ? recorder.elapsedMs : null;
+  const applyWeak = () => {
+    if (!diff) return;
+    addWeakWords(diff.weak, currentId);
+    setAppliedTake(recorder.url);
+  };
 
   const lastIndex = items.length - 1;
   const playAll = useCallback(() => play(0, lastIndex), [play, lastIndex]);
@@ -155,8 +183,51 @@ export function App() {
       </section>
 
       <section className={styles.section}>
+        <h2>녹음과 발음 비교</h2>
+        <Recorder
+          recorder={recorder}
+          recognition={recognition}
+          alternate={alternate}
+          useRecognition={useRecognition}
+          onUseRecognitionChange={setUseRecognition}
+          sentences={items}
+          ttsSupported={tts.supported}
+          hasText={hasText}
+        />
+        {diff && (
+          <DiffView
+            result={diff.result}
+            summary={diff.summary}
+            heardText={recognition.finalTranscript}
+            weakCount={new Set(diff.weak).size}
+            weakApplied={appliedTake !== null && appliedTake === recorder.url}
+            onApplyWeak={applyWeak}
+            saveDisabled={locked}
+          />
+        )}
+        {recorder.status === 'stopped' && !diff && useRecognition && recognition.supported && !recognition.listening && (
+          <Notice>인식된 말이 없어 대본과 비교하지 못했습니다. 마이크 소리와 선택한 언어를 확인해 주세요.</Notice>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <h2>자주 틀리는 단어</h2>
+        <WeakWords
+          words={weakWords}
+          scripts={scripts}
+          ttsSupported={tts.supported}
+          speaking={tts.status !== 'idle' && tts.activeIndex === null}
+          onSpeakOne={(w) => playTexts([w])}
+          onLoop={(ws) => playTexts(ws, { loop: true })}
+          onStop={stop}
+          onRemove={removeWeakWord}
+          onClear={clearWeakWords}
+        />
+      </section>
+
+      <section className={styles.section}>
         <h2>발표 시간 연습</h2>
-        <Timer scriptId={currentId} scriptTitle={title.trim()} text={deferredText} locale={locale} onSaveRecord={addRecord} />
+        <Timer scriptId={currentId} scriptTitle={title.trim()} text={deferredText} locale={locale} recordingMs={recordingMs} onSaveRecord={addRecord} />
       </section>
 
       <section className={styles.section}>
