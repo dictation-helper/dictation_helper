@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { loadData, saveData } from '../storage';
-import type { Script, Settings, StoredData } from '../types';
+import type { PracticeRecord, Script, Settings, StoredData } from '../types';
 import { createId } from '../lib/id';
 
 export interface ScriptDraft {
@@ -51,10 +51,21 @@ export function useScripts() {
     [data, commit],
   );
 
+  const addRecord = useCallback(
+    (draft: Omit<PracticeRecord, 'id' | 'date'>) =>
+      commit({ ...data, records: [...data.records, { ...draft, id: createId(), date: new Date().toISOString() }] }),
+    [data, commit],
+  );
+
+  const removeRecord = useCallback(
+    (id: string) => commit({ ...data, records: data.records.filter((r) => r.id !== id) }),
+    [data, commit],
+  );
+
   const updateSettings = useCallback(
     (patch: Partial<Settings>) => commit({ ...data, settings: { ...data.settings, ...patch } }),
     [data, commit],
   );
 
-  return { scripts: data.scripts, settings: data.settings, save, remove, updateSettings, saveFailed, locked };
+  return { scripts: data.scripts, settings: data.settings, records: data.records, save, remove, addRecord, removeRecord, updateSettings, saveFailed, locked };
 }
