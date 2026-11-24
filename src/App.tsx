@@ -1,6 +1,7 @@
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import styles from './App.module.css';
 import { DiffView } from './components/DiffView/DiffView';
+import { Memorize } from './components/Memorize/Memorize';
 import { Notice } from './components/Notice/Notice';
 import { PracticeHistory } from './components/PracticeHistory/PracticeHistory';
 import { Recorder } from './components/Recorder/Recorder';
@@ -19,11 +20,12 @@ import { useVoices } from './hooks/useVoices';
 import { detectLang } from './lib/detectLang';
 import { collectWeakWords, diffScript, summarizeDiff } from './lib/diffWords';
 import { flattenScript, segmentScript } from './lib/segment';
+import { LEVEL_LABELS, toggleKeyword, type MaskLevel } from './lib/mask';
 import { filterVoices, listLangs, pickVoice } from './lib/voices';
 import type { Script } from './types';
 
 export function App() {
-  const { scripts, settings, records, weakWords, save, remove, addRecord, removeRecord, addWeakWords, removeWeakWord, clearWeakWords, updateSettings, saveFailed, locked } = useScripts();
+  const { scripts, settings, records, weakWords, keywords: storedKeywords, setKeywords, save, remove, addRecord, removeRecord, addWeakWords, removeWeakWord, clearWeakWords, updateSettings, saveFailed, locked } = useScripts();
   const voices = useVoices();
 
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -54,6 +56,24 @@ export function App() {
   const [useRecognition, setUseRecognition] = useState(false);
   const [appliedTake, setAppliedTake] = useState<string | null>(null);
 
+  // Memorize mode. Keywords of saved scripts live in storage; an unsaved draft keeps them in memory.
+  const [maskLevel, setMaskLevel] = useState<MaskLevel>('full');
+  const [takeLevel, setTakeLevel] = useState<MaskLevel>('full');
+  const [draftKeywords, setDraftKeywords] = useState<string[]>([]);
+  const keywords = useMemo(
+    () => (currentId === null ? draftKeywords : (storedKeywords.find((k) => k.scriptId === currentId)?.words ?? [])),
+    [currentId, draftKeywords, storedKeywords],
+  );
+  const onToggleKeyword = (key: string) => {
+    const next = toggleKeyword(keywords, key);
+    if (currentId === null) setDraftKeywords(next);
+    else setKeywords(currentId, next);
+  };
+  const onClearKeywords = () => {
+    if (currentId === null) setDraftKeywords([]);
+    else setKeywords(currentId, []);
+  };
+
   const speakOnce = useCallback((text: string, onDone: () => void) => playTexts([text], { onDone }), [playTexts]);
   const alternate = useAlternatePlayback({ speak: speakOnce, stopSpeaking: stop });
 
@@ -82,10 +102,15 @@ export function App() {
     [play, stop, tts.repeating, tts.activeIndex],
   );
 
-  const onSave = () => setCurrentId(save({ id: currentId, title, text, lang: langChoice }));
+  const onSave = () => {
+    const id = save({ id: currentId, title, text, lang: langChoice }, draftKeywords);
+    if (currentId === null) setDraftKeywords([]);
+    setCurrentId(id);
+  };
   const onNew = () => {
     stop();
     setCurrentId(null);
+    setDraftKeywords([]);
     setTitle('');
     setText('');
     setLangChoice('auto');
@@ -184,6 +209,24 @@ export function App() {
       </section>
 
       <section className={styles.section}>
+        <h2>외우기 모드</h2>
+        {hasText ? (
+          <Memorize
+            paragraphs={paragraphs}
+            locale={locale}
+            level={maskLevel}
+            keywords={keywords}
+            keywordsPersisted={currentId !== null}
+            onLevelChange={setMaskLevel}
+            onToggleKeyword={onToggleKeyword}
+            onClearKeywords={onClearKeywords}
+          />
+        ) : (
+          <p className={styles.note}>대본을 올리면 단계별로 가려 가며 외울 수 있습니다.</p>
+        )}
+      </section>
+
+      <section className={styles.section}>
         <h2>녹음과 발음 비교</h2>
         <Recorder
           recorder={recorder}
@@ -194,6 +237,7 @@ export function App() {
           sentences={items}
           ttsSupported={tts.supported}
           hasText={hasText}
+          onTakeStart={() => setTakeLevel(maskLevel)}
         />
         {diff && (
           <DiffView
@@ -204,6 +248,7 @@ export function App() {
             weakApplied={appliedTake !== null && appliedTake === recorder.url}
             onApplyWeak={applyWeak}
             saveDisabled={locked}
+            levelLabel={LEVEL_LABELS[takeLevel]}
           />
         )}
         {recorder.status === 'stopped' && !useRecognition && recognition.supported && (

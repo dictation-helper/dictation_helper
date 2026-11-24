@@ -28,7 +28,7 @@ export function useScripts() {
 
   /** Creates or updates a script and returns its id. */
   const save = useCallback(
-    (draft: ScriptDraft): string => {
+    (draft: ScriptDraft, newKeywords?: readonly string[]): string => {
       const now = Date.now();
       const existing = draft.id ? data.scripts.find((s) => s.id === draft.id) : undefined;
       const id = existing?.id ?? createId();
@@ -41,7 +41,12 @@ export function useScripts() {
         updatedAt: now,
       };
       const scripts = existing ? data.scripts.map((s) => (s.id === id ? script : s)) : [...data.scripts, script];
-      commit({ ...data, scripts });
+      // Keywords picked while the script was still unsaved are stored together with the script.
+      const keywords =
+        newKeywords && newKeywords.length > 0 && !existing
+          ? [...data.keywords, { scriptId: id, words: [...newKeywords] }]
+          : data.keywords;
+      commit({ ...data, scripts, keywords });
       return id;
     },
     [data, commit],

@@ -10,14 +10,17 @@ interface Props {
   weakApplied: boolean;
   onApplyWeak: () => void;
   saveDisabled: boolean;
+  /** Memorize level that was active when the take was recorded. */
+  levelLabel?: string;
 }
 
-export function DiffView({ result, summary, heardText, weakCount, weakApplied, onApplyWeak, saveDisabled }: Props) {
+export function DiffView({ result, summary, heardText, weakCount, weakApplied, onApplyWeak, saveDisabled, levelLabel }: Props) {
   const sep = result.mode === 'word' ? ' ' : '';
   const percent = summary.accuracy === null ? null : Math.round(summary.accuracy * 100);
   return (
     <div className={styles.diff}>
       <SpeechNotice short />
+      {levelLabel && <p className={styles.note}>외우기 단계: {levelLabel} (비교는 항상 원래 대본 전체 기준)</p>}
       <p className={styles.summary}>
         일치 {summary.match} · 빠진 {summary.missing} · 바뀐 {summary.substituted} · 추가 {summary.extra}
         {percent !== null && ` · 일치율 ${percent}%`}
