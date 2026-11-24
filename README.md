@@ -2,7 +2,7 @@
 
 어떤 구술평가든 준비할 수 있는 정적 웹사이트입니다. 대본을 올리면 그 언어로 읽어 주고, 읽는 위치를 하이라이트합니다. 서버 없이 브라우저만으로 동작합니다.
 
-- 배포 URL: https://hg0328.github.io/dictation_helper/ (GitHub Pages 설정과 첫 배포 완료 후 접속 가능, 배포 확인 필요)
+- 배포 URL: https://dictation-helper.github.io/dictation_helper/ (GitHub Pages 설정과 첫 배포 완료 후 접속 가능, 배포 확인 필요)
 
 ## 현재 기능
 1. **대본 올리기**: 붙여넣기, `.txt` / `.md` 업로드, 제목을 붙여 여러 개 저장·불러오기·삭제 (localStorage).
