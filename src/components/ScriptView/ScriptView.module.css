@@ -1,0 +1,12 @@
+.view { display: grid; gap: 18px; }
+.paragraph { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.pHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pTitle { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+.sentence { display: flex; gap: 6px; align-items: flex-start; padding: 2px; border-radius: 8px; border-left: 4px solid transparent; }
+.sentenceActive { background: var(--highlight); border-left-color: var(--accent); }
+.once { min-height: 32px; min-width: 32px; padding: 0 8px; flex: none; }
+.text { flex: 1; text-align: left; border: none; background: transparent; padding: 4px 6px; min-height: 32px; border-radius: 6px; line-height: 1.8; }
+.text:hover { background: rgba(36, 86, 214, 0.08); }
+.word { border-radius: 3px; }
+.wordActive { background: var(--accent); color: var(--accent-text); text-decoration: underline; font-weight: 700; }
+.hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
