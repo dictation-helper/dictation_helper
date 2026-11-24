@@ -65,7 +65,7 @@ export function Recorder({ recorder, recognition, alternate, useRecognition, onU
       {recognition.supported && (
         <label className={styles.check}>
           <input type="checkbox" checked={useRecognition} onChange={(e) => onUseRecognitionChange(e.target.checked)} disabled={recording} />
-          <span>음성 인식으로 대본과 비교 (크롬에서는 음성이 구글 서버로 전송됩니다)</span>
+          <span>음성 인식으로 대본과 비교 (켜면 크롬에서는 녹음하는 음성이 구글 서버로 전송됩니다. 기본은 꺼짐)</span>
         </label>
       )}
 

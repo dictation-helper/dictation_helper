@@ -50,7 +50,8 @@ export function App() {
 
   const recorder = useRecorder();
   const recognition = useSpeechRecognition(voice?.lang ?? locale);
-  const [useRecognition, setUseRecognition] = useState(true);
+  // Off on every load: no SpeechRecognition instance is created until the user opts in.
+  const [useRecognition, setUseRecognition] = useState(false);
   const [appliedTake, setAppliedTake] = useState<string | null>(null);
 
   const speakOnce = useCallback((text: string, onDone: () => void) => playTexts([text], { onDone }), [playTexts]);
@@ -204,6 +205,9 @@ export function App() {
             onApplyWeak={applyWeak}
             saveDisabled={locked}
           />
+        )}
+        {recorder.status === 'stopped' && !useRecognition && recognition.supported && (
+          <Notice>대본과 비교하려면 위의 &quot;음성 인식으로 대본과 비교&quot;를 켠 뒤 다시 녹음해 주세요. 지금은 음성 인식이 꺼져 있어 녹음과 다시 듣기만 됩니다.</Notice>
         )}
         {recorder.status === 'stopped' && !diff && useRecognition && recognition.supported && !recognition.listening && (
           <Notice>인식된 말이 없어 대본과 비교하지 못했습니다. 마이크 소리와 선택한 언어를 확인해 주세요.</Notice>
