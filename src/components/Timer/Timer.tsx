@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTimer } from '../../hooks/useTimer';
-import { compareToTarget, formatClock, formatDurationKo, parseTargetMs, parseToleranceSec, progressRatio } from '../../lib/timing';
+import { compareToTarget, formatClock, formatDurationKo, parseTargetMs, pickDuration, parseToleranceSec, progressRatio } from '../../lib/timing';
 import { computeWpm, countWords } from '../../lib/wpm';
 import type { PracticeRecord } from '../../types';
 import { VerdictText } from './VerdictText';
@@ -30,9 +30,10 @@ export function Timer({ scriptId, scriptTitle, text, locale, recordingMs, onSave
   const wordCount = useMemo(() => countWords(text, locale), [text, locale]);
   const stopped = status === 'paused';
   // A recording is the actual speaking time, so it wins over the stopwatch when it exists.
-  const hasRecording = recordingMs !== null && recordingMs > 0;
-  const resultMs = hasRecording ? recordingMs : stopped ? elapsedMs : null;
-  const durationSource = hasRecording ? 'recording' : 'stopwatch';
+  const duration = pickDuration(recordingMs, stopped ? elapsedMs : null);
+  const hasRecording = duration?.source === 'recording';
+  const resultMs = duration?.ms ?? null;
+  const durationSource = duration?.source ?? 'stopwatch';
   const wpm = resultMs === null ? null : computeWpm(wordCount, resultMs);
   const saved = resultMs !== null && savedElapsed === resultMs;
 

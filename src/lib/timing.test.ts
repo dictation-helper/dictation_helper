@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  compareToTarget, elapsedAt, formatClock, formatDurationKo, parseNonNegInt, parseTargetMs, parseToleranceSec, progressRatio,
+  compareToTarget, elapsedAt, formatClock, formatDurationKo, parseNonNegInt, parseTargetMs, parseToleranceSec, pickDuration, progressRatio,
 } from './timing';
 
 describe('elapsedAt', () => {
@@ -74,5 +74,21 @@ describe('compareToTarget', () => {
     expect(compareToTarget(65_000, 60_000, 5).withinTolerance).toBe(true);
     expect(compareToTarget(66_000, 60_000, 5).withinTolerance).toBe(false);
     expect(compareToTarget(54_000, 60_000, 5).withinTolerance).toBe(false);
+  });
+});
+
+describe('pickDuration', () => {
+  it('prefers the recording over the stopwatch', () => {
+    expect(pickDuration(12_000, 30_000)).toEqual({ ms: 12_000, source: 'recording' });
+    expect(pickDuration(12_000, null)).toEqual({ ms: 12_000, source: 'recording' });
+  });
+  it('falls back to the stopwatch without a usable recording', () => {
+    expect(pickDuration(null, 30_000)).toEqual({ ms: 30_000, source: 'stopwatch' });
+    expect(pickDuration(0, 30_000)).toEqual({ ms: 30_000, source: 'stopwatch' });
+    expect(pickDuration(NaN, 30_000)).toEqual({ ms: 30_000, source: 'stopwatch' });
+  });
+  it('returns null when nothing was measured', () => {
+    expect(pickDuration(null, null)).toBeNull();
+    expect(pickDuration(null, 0)).toBeNull();
   });
 });
