@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CURRENT_SCHEMA_VERSION, emptyData, migrate, migrateV1toV2, migrateV2toV3 } from './migrate';
+import { CURRENT_SCHEMA_VERSION, emptyData, migrate, migrateV1toV2, migrateV2toV3, migrateV3toV4 } from './migrate';
 
 const v1 = {
   schemaVersion: 1,
@@ -8,13 +8,13 @@ const v1 = {
 };
 
 describe('migrate v1 -> v2', () => {
-  it('current version is 3', () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(3);
-    expect(emptyData()).toMatchObject({ schemaVersion: 3, records: [], weakWords: [] });
+  it('current version is 4', () => {
+    expect(CURRENT_SCHEMA_VERSION).toBe(4);
+    expect(emptyData()).toMatchObject({ schemaVersion: 4, records: [], weakWords: [], keywords: [] });
   });
   it('keeps v1 scripts and settings and adds empty records', () => {
     const out = migrate(v1);
-    expect(out).toEqual({ schemaVersion: 3, scripts: v1.scripts, settings: v1.settings, records: [], weakWords: [] });
+    expect(out).toEqual({ schemaVersion: 4, scripts: v1.scripts, settings: v1.settings, records: [], weakWords: [], keywords: [] });
   });
   it('migrateV1toV2 does not touch scripts or settings', () => {
     const out = migrateV1toV2(v1);
@@ -27,8 +27,8 @@ describe('migrate v1 -> v2', () => {
     void _omit;
     expect(migrate(legacy)?.scripts).toHaveLength(1);
   });
-  it('refuses data newer than v3', () => {
-    expect(migrate({ schemaVersion: 4, scripts: [], records: [] })).toBeNull();
+  it('refuses data newer than v4', () => {
+    expect(migrate({ schemaVersion: 5, scripts: [], records: [] })).toBeNull();
   });
 });
 
@@ -61,7 +61,7 @@ describe('migrate v2 -> v3', () => {
 
   it('keeps records intact and defaults durationSource to stopwatch', () => {
     const out = migrate(v2);
-    expect(out?.schemaVersion).toBe(3);
+    expect(out?.schemaVersion).toBe(4);
     expect(out?.records).toEqual([{ ...oldRec, durationSource: 'stopwatch' }]);
     expect(out?.scripts).toEqual(v1.scripts);
     expect(out?.settings).toEqual(v1.settings);
@@ -74,7 +74,7 @@ describe('migrate v2 -> v3', () => {
     expect(out).toMatchObject({ schemaVersion: 3, weakWords: [] });
   });
   it('chains v1 -> v3', () => {
-    expect(migrate(v1)).toMatchObject({ schemaVersion: 3, records: [], weakWords: [] });
+    expect(migrate(v1)).toMatchObject({ schemaVersion: 4, records: [], weakWords: [], keywords: [] });
   });
   it('keeps a recording durationSource and fixes invalid ones', () => {
     const out = migrate({ ...v2, schemaVersion: 3, weakWords: [], records: [{ ...oldRec, durationSource: 'recording' }, { ...oldRec, id: 'r2', durationSource: 'x' }] });
@@ -84,5 +84,40 @@ describe('migrate v2 -> v3', () => {
     const good = { word: 'apple', count: 2, lastSeen: '2026-11-24T10:00:00.000Z', scriptId: null };
     const out = migrate({ ...v2, schemaVersion: 3, weakWords: [good, { word: '', count: 1, lastSeen: good.lastSeen }, { ...good, count: 0 }, { ...good, lastSeen: 'x' }, null, { ...good, word: 'kiwi', scriptId: 5 }] });
     expect(out?.weakWords).toEqual([good, { ...good, word: 'kiwi', count: 2 }]);
+  });
+});
+
+describe('migrate v3 -> v4', () => {
+  const rec = { id: 'r1', scriptId: 'a', scriptTitle: 'T', date: '2026-11-24T10:00:00.000Z', elapsedMs: 1000, targetMs: null, toleranceSec: null, wordCount: 2, wpm: 120, durationSource: 'recording' };
+  const word = { word: 'apple', count: 2, lastSeen: '2026-11-24T10:00:00.000Z', scriptId: 'a' };
+  const v3 = { schemaVersion: 3, scripts: v1.scripts, settings: v1.settings, records: [rec], weakWords: [word] };
+
+  it('keeps every v3 field and adds empty keywords', () => {
+    const out = migrate(v3);
+    expect(out).toEqual({ schemaVersion: 4, scripts: v1.scripts, settings: v1.settings, records: [rec], weakWords: [word], keywords: [] });
+  });
+  it('migrateV3toV4 does not touch other fields', () => {
+    const out = migrateV3toV4(v3);
+    expect(out.records).toBe(v3.records);
+    expect(out.weakWords).toBe(v3.weakWords);
+    expect(out).toMatchObject({ schemaVersion: 4, keywords: [] });
+  });
+  it('keeps valid keywords of existing scripts', () => {
+    const out = migrate({ ...v3, schemaVersion: 4, keywords: [{ scriptId: 'a', words: ['apple', 'pear'] }] });
+    expect(out?.keywords).toEqual([{ scriptId: 'a', words: ['apple', 'pear'] }]);
+  });
+  it('drops keywords of unknown scripts and cleans bad entries', () => {
+    const out = migrate({
+      ...v3,
+      schemaVersion: 4,
+      keywords: [
+        { scriptId: 'gone', words: ['x'] },
+        { scriptId: 'a', words: [] },
+        { scriptId: 5, words: ['x'] },
+        null,
+        { scriptId: 'a', words: ['kiwi', 'kiwi', '', 3] },
+      ],
+    });
+    expect(out?.keywords).toEqual([{ scriptId: 'a', words: ['kiwi'] }]);
   });
 });

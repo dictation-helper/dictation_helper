@@ -48,7 +48,12 @@ export function useScripts() {
   );
 
   const remove = useCallback(
-    (id: string) => commit({ ...data, scripts: data.scripts.filter((s) => s.id !== id) }),
+    (id: string) =>
+      commit({
+        ...data,
+        scripts: data.scripts.filter((s) => s.id !== id),
+        keywords: data.keywords.filter((k) => k.scriptId !== id),
+      }),
     [data, commit],
   );
 
@@ -76,6 +81,15 @@ export function useScripts() {
     [data, commit],
   );
 
+  /** Replaces the keyword list of a saved script; an empty list removes the entry. */
+  const setKeywords = useCallback(
+    (scriptId: string, words: readonly string[]) => {
+      const others = data.keywords.filter((k) => k.scriptId !== scriptId);
+      commit({ ...data, keywords: words.length === 0 ? others : [...others, { scriptId, words: [...words] }] });
+    },
+    [data, commit],
+  );
+
   const clearWeakWords = useCallback(() => commit({ ...data, weakWords: [] }), [data, commit]);
 
   const updateSettings = useCallback(
@@ -83,5 +97,5 @@ export function useScripts() {
     [data, commit],
   );
 
-  return { scripts: data.scripts, settings: data.settings, records: data.records, weakWords: data.weakWords, save, remove, addRecord, removeRecord, addWeakWords, removeWeakWord, clearWeakWords, updateSettings, saveFailed, locked };
+  return { scripts: data.scripts, settings: data.settings, records: data.records, weakWords: data.weakWords, keywords: data.keywords, setKeywords, save, remove, addRecord, removeRecord, addWeakWords, removeWeakWord, clearWeakWords, updateSettings, saveFailed, locked };
 }

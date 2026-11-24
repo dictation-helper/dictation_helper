@@ -1,6 +1,6 @@
-import type { PracticeRecord, Script, Settings, StoredData, WeakWord } from '../types';
+import type { PracticeRecord, Script, ScriptKeywords, Settings, StoredData, WeakWord } from '../types';
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export function emptyData(): StoredData {
   return {
@@ -9,6 +9,7 @@ export function emptyData(): StoredData {
     settings: { rate: null, voiceURI: null },
     records: [],
     weakWords: [],
+    keywords: [],
   };
 }
 
@@ -74,6 +75,12 @@ export function migrateV1toV2(v1: Record<string, unknown>): Record<string, unkno
   return { ...v1, schemaVersion: 2, records: [] };
 }
 
+function sanitizeKeywords(v: unknown): ScriptKeywords | null {
+  if (!isRecord(v) || typeof v.scriptId !== 'string' || v.scriptId === '' || !Array.isArray(v.words)) return null;
+  const words = Array.from(new Set(v.words.filter((w): w is string => typeof w === 'string' && w !== '')));
+  return words.length === 0 ? null : { scriptId: v.scriptId, words };
+}
+
 /**
  * v2 -> v3: adds the weak word list and a durationSource on every record.
  * Records written before v3 always used the stopwatch.
@@ -83,6 +90,11 @@ export function migrateV2toV3(v2: Record<string, unknown>): Record<string, unkno
     ? v2.records.map((r) => (isRecord(r) ? { ...r, durationSource: 'stopwatch' } : r))
     : [];
   return { ...v2, schemaVersion: 3, records, weakWords: [] };
+}
+
+/** v3 -> v4: adds per-script keywords for memorize mode. Everything else is kept as it is. */
+export function migrateV3toV4(v3: Record<string, unknown>): Record<string, unknown> {
+  return { ...v3, schemaVersion: 4, keywords: [] };
 }
 
 /**
@@ -98,6 +110,7 @@ export function migrate(raw: unknown): StoredData | null {
   // Data without a version is treated like v1 (same shape).
   if (version < 2) data = migrateV1toV2(data);
   if (version < 3) data = migrateV2toV3(data);
+  if (version < 4) data = migrateV3toV4(data);
   const scripts = Array.isArray(data.scripts)
     ? data.scripts.map(sanitizeScript).filter((s): s is Script => s !== null)
     : [];
@@ -107,5 +120,11 @@ export function migrate(raw: unknown): StoredData | null {
   const weakWords = Array.isArray(data.weakWords)
     ? data.weakWords.map(sanitizeWeakWord).filter((w): w is WeakWord => w !== null)
     : [];
-  return { schemaVersion: CURRENT_SCHEMA_VERSION, scripts, settings: sanitizeSettings(data.settings), records, weakWords };
+  const scriptIds = new Set(scripts.map((x) => x.id));
+  const keywords = Array.isArray(data.keywords)
+    ? data.keywords
+        .map(sanitizeKeywords)
+        .filter((k): k is ScriptKeywords => k !== null && scriptIds.has(k.scriptId))
+    : [];
+  return { schemaVersion: CURRENT_SCHEMA_VERSION, scripts, settings: sanitizeSettings(data.settings), records, weakWords, keywords };
 }
