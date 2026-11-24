@@ -45,6 +45,7 @@ export function Timer({ scriptId, scriptTitle, text, locale, onSaveRecord }: Pro
       toleranceSec,
       wordCount,
       wpm: wpm === null ? null : Math.round(wpm * 10) / 10,
+      durationSource: 'stopwatch',
     });
     setSavedElapsed(elapsedMs);
   };

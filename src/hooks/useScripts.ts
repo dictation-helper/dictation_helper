@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { loadData, saveData } from '../storage';
-import type { PracticeRecord, Script, Settings, StoredData } from '../types';
+import type { PracticeRecord, Script, Settings, StoredData, WeakWord } from '../types';
 import { createId } from '../lib/id';
+import { mergeWeakWords, weakWordKey } from '../lib/weakWords';
 
 export interface ScriptDraft {
   id: string | null;
@@ -62,10 +63,25 @@ export function useScripts() {
     [data, commit],
   );
 
+  /** Adds one take's weak words (each distinct word counts once). */
+  const addWeakWords = useCallback(
+    (words: readonly string[], scriptId: string | null) =>
+      commit({ ...data, weakWords: mergeWeakWords(data.weakWords, words, scriptId, new Date().toISOString()) }),
+    [data, commit],
+  );
+
+  const removeWeakWord = useCallback(
+    (target: WeakWord) =>
+      commit({ ...data, weakWords: data.weakWords.filter((w) => weakWordKey(w) !== weakWordKey(target)) }),
+    [data, commit],
+  );
+
+  const clearWeakWords = useCallback(() => commit({ ...data, weakWords: [] }), [data, commit]);
+
   const updateSettings = useCallback(
     (patch: Partial<Settings>) => commit({ ...data, settings: { ...data.settings, ...patch } }),
     [data, commit],
   );
 
-  return { scripts: data.scripts, settings: data.settings, records: data.records, save, remove, addRecord, removeRecord, updateSettings, saveFailed, locked };
+  return { scripts: data.scripts, settings: data.settings, records: data.records, weakWords: data.weakWords, save, remove, addRecord, removeRecord, addWeakWords, removeWeakWord, clearWeakWords, updateSettings, saveFailed, locked };
 }
