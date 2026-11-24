@@ -28,7 +28,7 @@ export function useScripts() {
 
   /** Creates or updates a script and returns its id. */
   const save = useCallback(
-    (draft: ScriptDraft): string => {
+    (draft: ScriptDraft, newKeywords?: readonly string[]): string => {
       const now = Date.now();
       const existing = draft.id ? data.scripts.find((s) => s.id === draft.id) : undefined;
       const id = existing?.id ?? createId();
@@ -41,14 +41,24 @@ export function useScripts() {
         updatedAt: now,
       };
       const scripts = existing ? data.scripts.map((s) => (s.id === id ? script : s)) : [...data.scripts, script];
-      commit({ ...data, scripts });
+      // Keywords picked while the script was still unsaved are stored together with the script.
+      const keywords =
+        newKeywords && newKeywords.length > 0 && !existing
+          ? [...data.keywords, { scriptId: id, words: [...newKeywords] }]
+          : data.keywords;
+      commit({ ...data, scripts, keywords });
       return id;
     },
     [data, commit],
   );
 
   const remove = useCallback(
-    (id: string) => commit({ ...data, scripts: data.scripts.filter((s) => s.id !== id) }),
+    (id: string) =>
+      commit({
+        ...data,
+        scripts: data.scripts.filter((s) => s.id !== id),
+        keywords: data.keywords.filter((k) => k.scriptId !== id),
+      }),
     [data, commit],
   );
 
@@ -76,6 +86,15 @@ export function useScripts() {
     [data, commit],
   );
 
+  /** Replaces the keyword list of a saved script; an empty list removes the entry. */
+  const setKeywords = useCallback(
+    (scriptId: string, words: readonly string[]) => {
+      const others = data.keywords.filter((k) => k.scriptId !== scriptId);
+      commit({ ...data, keywords: words.length === 0 ? others : [...others, { scriptId, words: [...words] }] });
+    },
+    [data, commit],
+  );
+
   const clearWeakWords = useCallback(() => commit({ ...data, weakWords: [] }), [data, commit]);
 
   const updateSettings = useCallback(
@@ -83,5 +102,5 @@ export function useScripts() {
     [data, commit],
   );
 
-  return { scripts: data.scripts, settings: data.settings, records: data.records, weakWords: data.weakWords, save, remove, addRecord, removeRecord, addWeakWords, removeWeakWord, clearWeakWords, updateSettings, saveFailed, locked };
+  return { scripts: data.scripts, settings: data.settings, records: data.records, weakWords: data.weakWords, keywords: data.keywords, setKeywords, save, remove, addRecord, removeRecord, addWeakWords, removeWeakWord, clearWeakWords, updateSettings, saveFailed, locked };
 }

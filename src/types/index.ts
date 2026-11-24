@@ -20,6 +20,7 @@ export interface StoredData {
   settings: Settings;
   records: PracticeRecord[];
   weakWords: WeakWord[];
+  keywords: ScriptKeywords[];
 }
 
 export interface PracticeRecord {
@@ -48,4 +49,13 @@ export interface WeakWord {
   lastSeen: string;
   /** null when the script was not saved in the library. */
   scriptId: string | null;
+}
+
+/**
+ * Keywords chosen for memorize mode. Stored as normalized word strings (not text positions)
+ * so they survive edits to the script text; every occurrence of the word counts.
+ */
+export interface ScriptKeywords {
+  scriptId: string;
+  words: string[];
 }

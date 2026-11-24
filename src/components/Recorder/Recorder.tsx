@@ -16,9 +16,11 @@ interface Props {
   sentences: readonly string[];
   ttsSupported: boolean;
   hasText: boolean;
+  /** Called after recording actually started (used to remember the memorize level of the take). */
+  onTakeStart?: () => void;
 }
 
-export function Recorder({ recorder, recognition, alternate, useRecognition, onUseRecognitionChange, sentences, ttsSupported, hasText }: Props) {
+export function Recorder({ recorder, recognition, alternate, useRecognition, onUseRecognitionChange, sentences, ttsSupported, hasText, onTakeStart }: Props) {
   const [sentenceIdx, setSentenceIdx] = useState(0);
   const recording = recorder.status === 'recording';
   const requesting = recorder.status === 'requesting';
@@ -34,6 +36,7 @@ export function Recorder({ recorder, recognition, alternate, useRecognition, onU
   const onStart = async () => {
     alternate.stop();
     const started = await recorder.start();
+    if (started) onTakeStart?.();
     if (started && recognizing) recognition.start();
   };
   const onStop = () => {
@@ -74,7 +77,7 @@ export function Recorder({ recorder, recognition, alternate, useRecognition, onU
         {recording ? (
           <button type="button" className="primary" onClick={onStop} aria-label="녹음 멈추기">녹음 멈추기</button>
         ) : (
-          <button type="button" className="primary" onClick={onStart} disabled={!recorder.supported || requesting} aria-label="녹음 시작">
+          <button type="button" className="primary" onClick={onStart} disabled={!recorder.supported || requesting}>
             {requesting ? '마이크 확인 중…' : hasTake ? '다시 녹음' : '녹음 시작'}
           </button>
         )}
