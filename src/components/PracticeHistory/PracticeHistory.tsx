@@ -41,7 +41,7 @@ export function PracticeHistory({ records, onDelete }: Props) {
                       <span className={styles.meta}> · {time}{r.scriptId === null ? ' · 저장 안 한 대본' : ''}</span>
                     </div>
                     <div className={styles.meta}>
-                      측정 {formatClock(r.elapsedMs)}
+                      측정 {formatClock(r.elapsedMs)} ({r.durationSource === 'recording' ? '녹음 시간' : '스톱워치'})
                       {r.wpm === null ? ' · WPM 계산 불가' : ` · 분당 약 ${Math.round(r.wpm)}단어 (${r.wordCount}개)`}
                     </div>
                     {target && <div className={styles.meta}>{target}</div>}

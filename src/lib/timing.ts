@@ -69,3 +69,18 @@ export function compareToTarget(elapsedMs: number, targetMs: number, toleranceSe
     withinTolerance: toleranceSec === null ? null : diffSec <= toleranceSec,
   };
 }
+
+export interface MeasuredDuration {
+  ms: number;
+  source: 'recording' | 'stopwatch';
+}
+
+/**
+ * Picks the time used for the verdict and WPM: a recording wins over the stopwatch.
+ * stopwatchMs must be null while the stopwatch has not been stopped.
+ */
+export function pickDuration(recordingMs: number | null, stopwatchMs: number | null): MeasuredDuration | null {
+  if (recordingMs !== null && Number.isFinite(recordingMs) && recordingMs > 0) return { ms: recordingMs, source: 'recording' };
+  if (stopwatchMs !== null && Number.isFinite(stopwatchMs) && stopwatchMs > 0) return { ms: stopwatchMs, source: 'stopwatch' };
+  return null;
+}

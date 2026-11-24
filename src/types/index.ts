@@ -19,6 +19,7 @@ export interface StoredData {
   scripts: Script[];
   settings: Settings;
   records: PracticeRecord[];
+  weakWords: WeakWord[];
 }
 
 export interface PracticeRecord {
@@ -34,4 +35,17 @@ export interface PracticeRecord {
   wordCount: number;
   /** null when it could not be computed (no words or zero time). */
   wpm: number | null;
+  /** Where elapsedMs (and the WPM) came from: the recording length or the stopwatch. */
+  durationSource: 'recording' | 'stopwatch';
+}
+
+export interface WeakWord {
+  /** Normalized (lowercase, no punctuation) form of the word. */
+  word: string;
+  /** Number of takes in which the word was missing or substituted. */
+  count: number;
+  /** ISO 8601 timestamp of the last take it appeared in. */
+  lastSeen: string;
+  /** null when the script was not saved in the library. */
+  scriptId: string | null;
 }

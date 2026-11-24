@@ -3,7 +3,7 @@ import { formatDateKeyKo, groupByDate, localDateKey } from './records';
 import type { PracticeRecord } from '../types';
 
 function rec(id: string, date: Date): PracticeRecord {
-  return { id, scriptId: null, scriptTitle: '', date: date.toISOString(), elapsedMs: 1000, targetMs: null, toleranceSec: null, wordCount: 1, wpm: 60 };
+  return { id, scriptId: null, scriptTitle: '', date: date.toISOString(), elapsedMs: 1000, targetMs: null, toleranceSec: null, wordCount: 1, wpm: 60, durationSource: 'stopwatch' };
 }
 
 describe('groupByDate', () => {

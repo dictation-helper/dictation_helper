@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTimer } from '../../hooks/useTimer';
-import { compareToTarget, formatClock, formatDurationKo, parseTargetMs, parseToleranceSec, progressRatio } from '../../lib/timing';
+import { compareToTarget, formatClock, formatDurationKo, parseTargetMs, pickDuration, parseToleranceSec, progressRatio } from '../../lib/timing';
 import { computeWpm, countWords } from '../../lib/wpm';
 import type { PracticeRecord } from '../../types';
 import { VerdictText } from './VerdictText';
@@ -11,12 +11,14 @@ interface Props {
   scriptTitle: string;
   text: string;
   locale?: string;
+  /** Length of the current recording in ms, or null when there is none. */
+  recordingMs: number | null;
   onSaveRecord: (draft: Omit<PracticeRecord, 'id' | 'date'>) => void;
 }
 
 const digitsOnly = (v: string) => v.replace(/\D/g, '').slice(0, 4);
 
-export function Timer({ scriptId, scriptTitle, text, locale, onSaveRecord }: Props) {
+export function Timer({ scriptId, scriptTitle, text, locale, recordingMs, onSaveRecord }: Props) {
   const { status, elapsedMs, start, pause, reset } = useTimer();
   const [minutes, setMinutes] = useState('');
   const [seconds, setSeconds] = useState('');
@@ -27,26 +29,33 @@ export function Timer({ scriptId, scriptTitle, text, locale, onSaveRecord }: Pro
   const toleranceSec = targetMs === null ? null : parseToleranceSec(tolerance);
   const wordCount = useMemo(() => countWords(text, locale), [text, locale]);
   const stopped = status === 'paused';
-  const wpm = stopped ? computeWpm(wordCount, elapsedMs) : null;
-  const saved = stopped && savedElapsed === elapsedMs;
+  // A recording is the actual speaking time, so it wins over the stopwatch when it exists.
+  const duration = pickDuration(recordingMs, stopped ? elapsedMs : null);
+  const hasRecording = duration?.source === 'recording';
+  const resultMs = duration?.ms ?? null;
+  const durationSource = duration?.source ?? 'stopwatch';
+  const wpm = resultMs === null ? null : computeWpm(wordCount, resultMs);
+  const saved = resultMs !== null && savedElapsed === resultMs;
 
   const ratio = targetMs === null ? 0 : progressRatio(elapsedMs, targetMs);
   const percent = Math.round(ratio * 100);
   const targetSec = targetMs === null ? 0 : Math.round(targetMs / 1000);
   const elapsedSec = Math.floor(elapsedMs / 1000);
-  const comparison = stopped && targetMs !== null ? compareToTarget(elapsedMs, targetMs, toleranceSec) : null;
+  const comparison = resultMs !== null && targetMs !== null ? compareToTarget(resultMs, targetMs, toleranceSec) : null;
 
   const onSave = () => {
+    if (resultMs === null) return;
     onSaveRecord({
       scriptId,
       scriptTitle,
-      elapsedMs: Math.round(elapsedMs),
+      elapsedMs: Math.round(resultMs),
       targetMs,
       toleranceSec,
       wordCount,
       wpm: wpm === null ? null : Math.round(wpm * 10) / 10,
+      durationSource,
     });
-    setSavedElapsed(elapsedMs);
+    setSavedElapsed(resultMs);
   };
 
   return (
@@ -102,9 +111,10 @@ export function Timer({ scriptId, scriptTitle, text, locale, onSaveRecord }: Pro
         </div>
       )}
 
-      {stopped && (
+      {resultMs !== null && (
         <div className={styles.result} aria-live="polite">
-          <p className={styles.line}>측정 시간: {formatClock(elapsedMs)}</p>
+          <p className={styles.line}>측정 시간: {formatClock(resultMs)} ({durationSource === 'recording' ? '녹음 시간 기준' : '스톱워치 기준'})</p>
+          {hasRecording && stopped && <p className={styles.line}>스톱워치 시간: {formatClock(elapsedMs)} (참고용, 계산에는 녹음 시간을 씁니다)</p>}
           {comparison && (
             <p className={styles.line}>
               {comparison.direction === 'same' ? '목표와 같음' : `목표보다 ${formatDurationKo(comparison.diffSec)} ${comparison.direction === 'faster' ? '빠름' : '느림'}`}
@@ -114,7 +124,7 @@ export function Timer({ scriptId, scriptTitle, text, locale, onSaveRecord }: Pro
           <p className={styles.line}>
             {wpm === null
               ? '속도(WPM): 대본에 단어가 없어 계산할 수 없습니다.'
-              : `속도: 분당 약 ${Math.round(wpm)}단어 (단어 ${wordCount}개)`}
+              : `속도: 분당 약 ${Math.round(wpm)}단어 (단어 ${wordCount}개, ${durationSource === 'recording' ? '녹음 시간' : '스톱워치'} 기준)`}
           </p>
           <button type="button" onClick={onSave} disabled={saved} aria-label="연습 기록 저장">
             {saved ? '저장됨' : '기록 저장'}

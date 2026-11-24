@@ -44,20 +44,35 @@ export function useSpeechSynthesis(items: readonly string[], options: SpeakOptio
     reset();
   }, [supported, reset]);
 
-  /** Read items[from..to]; with loop=true, repeat items[from] until stopped. */
-  const play = useCallback(
-    (from: number, to: number, loop = false) => {
+  /**
+   * Core loop. `list` returns the text at an index; `highlight` tells whether activeIndex
+   * should follow the script. loop: 'item' repeats one item, 'all' repeats from..to.
+   */
+  const run = useCallback(
+    (
+      list: () => readonly string[],
+      from: number,
+      to: number,
+      loop: 'none' | 'item' | 'all',
+      highlight: boolean,
+      onDone?: () => void,
+    ) => {
       if (!supported) return;
       const synth = window.speechSynthesis;
-      const run = ++runRef.current;
+      const myRun = ++runRef.current;
       synth.cancel();
       setError(null);
-      setRepeating(loop);
+      setRepeating(loop !== 'none');
+
+      const finish = () => {
+        reset();
+        onDone?.();
+      };
 
       const step = (i: number) => {
-        const text = itemsRef.current[i];
+        const text = list()[i];
         if (text === undefined) {
-          reset();
+          finish();
           return;
         }
         const { rate, voice, lang } = optionsRef.current;
@@ -72,27 +87,28 @@ export function useSpeechSynthesis(items: readonly string[], options: SpeakOptio
 
         let gotBoundary = false;
         u.onboundary = (e) => {
-          if (run !== runRef.current) return;
+          if (myRun !== runRef.current) return;
           if (e.name && e.name !== 'word') return;
           gotBoundary = true;
           setCharIndex(e.charIndex);
         };
         u.onend = () => {
-          if (run !== runRef.current) return;
-          setBoundaryMissing(!gotBoundary);
-          if (loop) step(i);
+          if (myRun !== runRef.current) return;
+          if (highlight) setBoundaryMissing(!gotBoundary);
+          if (loop === 'item') step(i);
           else if (i < to) step(i + 1);
-          else reset();
+          else if (loop === 'all') step(from);
+          else finish();
         };
         u.onerror = (e) => {
-          if (run !== runRef.current) return;
+          if (myRun !== runRef.current) return;
           if (e.error === 'canceled' || e.error === 'interrupted') return;
           runRef.current += 1;
           setError(`음성 재생 중 오류가 발생했습니다 (${e.error}).`);
           reset();
         };
 
-        setActiveIndex(i);
+        setActiveIndex(highlight ? i : null);
         setCharIndex(null);
         setStatus('playing');
         synth.speak(u);
@@ -100,6 +116,21 @@ export function useSpeechSynthesis(items: readonly string[], options: SpeakOptio
       step(from);
     },
     [supported, reset],
+  );
+
+  /** Read items[from..to] of the script; with loop=true, repeat items[from] until stopped. */
+  const play = useCallback(
+    (from: number, to: number, loop = false) => run(() => itemsRef.current, from, to, loop ? 'item' : 'none', true),
+    [run],
+  );
+
+  /** Read arbitrary texts (not the script). loop repeats the whole list; onDone fires after a natural finish. */
+  const playTexts = useCallback(
+    (texts: readonly string[], opts: { loop?: boolean; onDone?: () => void } = {}) => {
+      if (texts.length === 0) return;
+      run(() => texts, 0, texts.length - 1, opts.loop ? 'all' : 'none', false, opts.onDone);
+    },
+    [run],
   );
 
   const pause = useCallback(() => {
@@ -117,5 +148,5 @@ export function useSpeechSynthesis(items: readonly string[], options: SpeakOptio
   // Stop when the script changes and when the component unmounts.
   useEffect(() => () => stop(), [items, stop]);
 
-  return { supported, status, activeIndex, charIndex, repeating, boundaryMissing, error, play, pause, resume, stop };
+  return { supported, status, activeIndex, charIndex, repeating, boundaryMissing, error, play, playTexts, pause, resume, stop };
 }

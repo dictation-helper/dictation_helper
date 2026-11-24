@@ -1,0 +1,13 @@
+.recorder { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.check { display: flex; gap: 8px; align-items: flex-start; }
+.check input { margin-top: 6px; }
+.clock { font-size: 2rem; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.buttons button { min-width: 120px; min-height: 44px; }
+.interim { margin: 0; color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
+.take { display: grid; gap: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.audio { width: 100%; }
+.alt { display: grid; gap: 8px; justify-items: start; }
+.select { display: grid; gap: 2px; width: 100%; font-size: 0.9rem; }
+.select select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.help { margin: 0; color: var(--muted); font-size: 0.85rem; }
