@@ -1,0 +1,5 @@
+.bar { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.field { display: grid; gap: 2px; flex: 1 1 200px; font-size: 0.9rem; }
+.field span { font-weight: 600; }
+.badge { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--accent); font-size: 0.85rem; }

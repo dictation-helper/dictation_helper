@@ -1,0 +1,4 @@
+.notice { margin: 0; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-size: 0.92rem; }
+.warn { border-color: #d9a400; background: #fff8e0; }
+.error { border-color: var(--danger); background: #fdecea; }
+.notice strong { margin-right: 6px; }
