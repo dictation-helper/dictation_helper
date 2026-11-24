@@ -1,9 +1,11 @@
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import styles from './App.module.css';
 import { Notice } from './components/Notice/Notice';
+import { PracticeHistory } from './components/PracticeHistory/PracticeHistory';
 import { ScriptInput } from './components/ScriptInput/ScriptInput';
 import { ScriptLibrary } from './components/ScriptLibrary/ScriptLibrary';
 import { ScriptView } from './components/ScriptView/ScriptView';
+import { Timer } from './components/Timer/Timer';
 import { TTSControls } from './components/TTSControls/TTSControls';
 import { useScripts } from './hooks/useScripts';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
@@ -14,7 +16,7 @@ import { filterVoices, listLangs, pickVoice } from './lib/voices';
 import type { Script } from './types';
 
 export function App() {
-  const { scripts, settings, save, remove, updateSettings, saveFailed, locked } = useScripts();
+  const { scripts, settings, records, save, remove, addRecord, removeRecord, updateSettings, saveFailed, locked } = useScripts();
   const voices = useVoices();
 
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -150,6 +152,17 @@ export function App() {
             <p>위 입력창에 대본을 붙여넣거나 .txt / .md 파일을 올려 시작하세요.</p>
           </div>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <h2>발표 시간 연습</h2>
+        <Timer scriptId={currentId} scriptTitle={title.trim()} text={deferredText} locale={locale} onSaveRecord={addRecord} />
+      </section>
+
+      <section className={styles.section}>
+        <h2>연습 기록</h2>
+        <p className={styles.note}>기록은 이 브라우저(localStorage)에만 저장되며 서버로 전송되지 않습니다.</p>
+        <PracticeHistory records={records} onDelete={removeRecord} />
       </section>
     </main>
   );

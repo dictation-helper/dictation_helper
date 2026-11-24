@@ -1,0 +1,8 @@
+.history { display: grid; gap: 14px; }
+.date { margin: 0 0 6px; font-size: 1rem; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.body { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 0.85rem; }
+.actions { display: flex; gap: 6px; }
+.empty { color: var(--muted); margin: 0; }
